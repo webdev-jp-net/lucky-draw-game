@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Home Homeのスナップショット 1`] = `
+<DocumentFragment>
+  <div
+    class="l-page home"
+  >
+    <h1
+      class="title"
+    >
+      Lucky Draw Game
+    </h1>
+    <div
+      class="menu"
+    >
+      <button
+        class="button --basic"
+        type="button"
+      >
+        start
+      </button>
+      <div
+        class="icon"
+      >
+        🎯
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
