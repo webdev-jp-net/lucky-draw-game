@@ -7,7 +7,9 @@ import { useDispatch } from 'react-redux';
 import reportWebVitals from 'reportWebVitals';
 
 import { Button } from 'components/parts/Button';
-import { updateScore } from 'store/user';
+import { updateUserId } from 'store/user';
+
+import { useGenerateAndStoreSessionId } from 'hooks/useGenerateAndStoreSessionId';
 
 import styles from './Home.module.scss';
 
@@ -15,9 +17,13 @@ export const Home: FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const generateId = useGenerateAndStoreSessionId;
+
   // ページを表示したとき
   useEffect(() => {
-    dispatch(updateScore(0));
+    const myId = generateId();
+    console.log({ myId });
+    dispatch(updateUserId(myId));
     reportWebVitals(console.log);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

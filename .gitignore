@@ -85,6 +85,3 @@ sw.*
 
 # Vim swap files
 *.swp
-
-# firebase
-src/firebaseConfig.ts

@@ -1,11 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 type State = {
-  score: number;
+  userId: string;
 };
 
 const initialState: State = {
-  score: 0,
+  userId: '',
 };
 
 const user = createSlice({
@@ -14,14 +14,14 @@ const user = createSlice({
   initialState,
 
   reducers: {
-    updateScore: (state, action) => {
-      state.score = action.payload;
+    updateUserId: (state, action) => {
+      state.userId = action.payload;
     },
   },
 });
 
 // Action Creators
-export const { updateScore } = user.actions;
+export const { updateUserId } = user.actions;
 
 // Reducer
 export default user.reducer;

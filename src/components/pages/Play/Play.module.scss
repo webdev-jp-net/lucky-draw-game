@@ -8,6 +8,34 @@
     user-select: none;
   }
 }
+.container {
+  padding: rem(24);
+}
+
+.memberList {
+  display: flex;
+  gap: rem(24);
+  margin: rem(24) 0;
+}
+
+.member {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  align-items: center;
+}
+
+.memberIcon {
+  @include rect(rem(18));
+
+  display: block;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.current {
+  font-size: rem(10);
+}
 
 .visualizer {
   position: absolute;
