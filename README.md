@@ -1,6 +1,6 @@
 # Lucky Draw Game
 
-🎯 [Demo Program](https://lucky-draw-game.vercel.app/)
+🎯 [Demo Program](https://lucky-draw-game-llmv8rgiv-webdev-jp-net.vercel.app/)
 
 ## Setup
 
