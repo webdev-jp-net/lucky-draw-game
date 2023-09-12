@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, runTransaction } from 'firebase/firestore';
 import { db } from 'firebaseDB';
 
 type State = {
@@ -58,8 +58,31 @@ type FirebaseMutationParams<T> = {
 };
 const firebaseMutationBaseQuery = async <T>({ path, value }: FirebaseMutationParams<T>) => {
   const statusRef = collection(db, 'status');
-  await setDoc(doc(statusRef, path), value);
-  return { data: null }; // ここでは成功時にnullを返しています
+
+  if (path === 'room_entries') {
+    const memberListRef = doc(db, 'status', 'room_entries');
+
+    try {
+      await runTransaction(db, async transaction => {
+        const sfDoc = await transaction.get(memberListRef);
+        if (!sfDoc.exists()) {
+          // eslint-disable-next-line no-throw-literal
+          throw 'Document does not exist!';
+        }
+        const oldMemberList = sfDoc.data().memberList || [];
+        const newMemberList = [...oldMemberList, ...(value as EntriesResponse).memberList];
+        const uniqueMemberList = Array.from(new Set(newMemberList));
+        transaction.update(memberListRef, { memberList: uniqueMemberList });
+      });
+      console.log('Transaction successfully committed!');
+    } catch (e) {
+      console.log('Transaction failed: ', e);
+    }
+    return { data: null };
+  } else {
+    await setDoc(doc(statusRef, path), value);
+    return { data: null };
+  }
 };
 export const statusUpdateApi = createApi({
   reducerPath: 'statusUpdateApi',
