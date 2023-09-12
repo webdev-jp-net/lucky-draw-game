@@ -2,20 +2,24 @@ import { FC, useCallback, useEffect, useMemo } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { Button } from 'components/parts/Button';
 import { RootState } from 'store';
 import {
+  updateMemberList,
+  resetDrawResult,
   useGetEntriesQuery,
   useGetDrawResultQuery,
-  useUpdateEntriesMutation,
+  useAddEntriesMutation,
+  useRemoveEntriesMutation,
   useUpdateDrawResultMutation,
 } from 'store/user';
 
 import styles from './Play.module.scss';
 
 export const Play: FC = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userId, memberList, drawResult } = useSelector((state: RootState) => state.user);
 
@@ -69,11 +73,17 @@ export const Play: FC = () => {
     return list[index];
   };
 
-  // 入室メンバーを更新する
+  // 入室メンバーを追加する
   const [
-    sendEntries, // mutation trigger
-    { isLoading: entriesLoading, isSuccess: entriesSuccess, isError: entriesError }, // mutation state
-  ] = useUpdateEntriesMutation();
+    sendAddEntries, // mutation trigger
+    { isLoading: entriesAddLoading }, // mutation state
+  ] = useAddEntriesMutation();
+
+  // 入室メンバーを削除する
+  const [
+    sendRemoveEntries, // mutation trigger
+    { isLoading: entriesRemoveLoading }, // mutation state
+  ] = useRemoveEntriesMutation();
 
   // 抽選結果を更新する
   const [
@@ -119,16 +129,50 @@ export const Play: FC = () => {
   useEffect(() => {
     // userIdが割り付けられていることを確認し、処理を続行する
     if (userId && initialLoaded) {
-      // 抽選前
-      if (!drawResult) {
+      // 入室する
+      const addMyself = () => {
+        sendAddEntries(userId);
+
         // 入室メンバーに自分を追加する
         const newMemberList = [...memberList, userId];
         // 重複を解消する
         const uniqueMemberList: string[] = Array.from(new Set<string>(newMemberList));
-        sendEntries(uniqueMemberList);
+        dispatch(updateMemberList(uniqueMemberList));
+      };
+
+      // 抽選前
+      if (!drawResult) {
+        addMyself();
+      } else if (!memberList.length) {
+        // 抽選結果があるのに誰も入室していない場合は、抽選結果をリセットする
+        sendDrawResult('');
+        dispatch(resetDrawResult());
+        addMyself();
       }
     }
-  }, [userId, initialLoaded, sendEntries, memberList, drawResult]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, initialLoaded]);
+
+  // 退室処理
+  const handleExit = useCallback(() => {
+    // userIdが割り付けられていることを確認し、処理を続行する
+    if (initialLoaded) {
+      // 入室メンバーから自分を削除する
+      sendRemoveEntries(userId);
+      // トップページに戻る
+      navigate('/');
+
+      // メンバーリストを初期化する
+      dispatch(updateMemberList([]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLoaded, memberList]);
+
+  // 再読み込み
+  const handleReload = useCallback(() => {
+    getEntriesRefetch();
+    getDrawResultRefetch();
+  }, [getEntriesRefetch, getDrawResultRefetch]);
 
   return (
     <div className={`l-page ${styles.play}`}>
@@ -158,7 +202,10 @@ export const Play: FC = () => {
         <div className={styles.menu}>
           {!isClosed && (
             <>
-              <Button handleClick={getEntriesRefetch} disabled={entriesLoading || !!drawResult}>
+              <Button
+                handleClick={handleReload}
+                disabled={entriesAddLoading || entriesRemoveLoading || !!drawResult}
+              >
                 reload
               </Button>
               <Button handleClick={handleDraw} disabled={drawResultLoading || !!drawResult}>
@@ -166,13 +213,7 @@ export const Play: FC = () => {
               </Button>
             </>
           )}
-          <Button
-            handleClick={() => {
-              navigate('/');
-            }}
-          >
-            exit
-          </Button>
+          <Button handleClick={handleExit}>exit</Button>
         </div>
       </div>
     </div>
