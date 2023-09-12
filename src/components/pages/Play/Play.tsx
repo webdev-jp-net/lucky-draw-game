@@ -174,6 +174,12 @@ export const Play: FC = () => {
     getDrawResultRefetch();
   }, [getEntriesRefetch, getDrawResultRefetch]);
 
+  // 初回読み込み
+  useEffect(() => {
+    handleReload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className={`l-page ${styles.play}`}>
       <div className={styles.container}>

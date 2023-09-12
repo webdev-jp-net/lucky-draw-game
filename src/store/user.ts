@@ -154,7 +154,11 @@ const user = createSlice({
     builder.addMatcher(
       statusGetApi.endpoints.getEntries.matchFulfilled,
       (state, action: PayloadAction<EntriesResponse>) => {
-        state.memberList = action.payload.memberList;
+        const oldMemberList = action.payload.memberList || [];
+        const newMemberList = [...oldMemberList, state.userId];
+        const uniqueMemberList = Array.from(new Set(newMemberList));
+
+        state.memberList = uniqueMemberList;
       }
     );
     builder.addMatcher(
