@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo } from 'react';
+import { FC, useCallback, useEffect, useMemo } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -53,10 +53,15 @@ export const Play: FC = () => {
     if (getDrawResultError) console.error({ getDrawResultError });
   }, [getDrawResultError]);
 
-  //入室メンバー情報と抽選結果を取得できているか確認するフラグ
+  // 初回データ取得済フラグ: 入室メンバー情報と抽選結果を取得できている
   const initialLoaded = useMemo(() => {
     return getEntriesSuccess && getDrawResultSuccess;
   }, [getEntriesSuccess, getDrawResultSuccess]);
+
+  // 締切済フラグ: 抽選が終了しており自分も入室していない
+  const isClosed = useMemo(() => {
+    return drawResult && !memberList.includes(userId);
+  }, [drawResult, memberList, userId]);
 
   // 配列の要素からランダムに一つ引き当てる
   const getRandomElement = (list: string[]) => {
@@ -81,45 +86,86 @@ export const Play: FC = () => {
     if (drawResultSuccess) getDrawResultRefetch();
   }, [drawResultSuccess, getDrawResultRefetch]);
 
-  // 抽選を実行する
-  const handleDraw = () => {
-    const result = getRandomElement(memberList);
-    console.log({ result });
-    sendDrawResult(result);
-  };
-
-  // userIdがあるならば、入室メンバーを更新する
-  useEffect(() => {
-    if (userId) {
-      const newMemberList = [...memberList, userId];
-      // 重複を解消する
-      const uniqueMemberList: string[] = Array.from(new Set<string>(newMemberList));
-      sendEntries(uniqueMemberList);
+  // 最新の入室メンバー情報を取得し、抽選実行を確認する
+  const handleDraw = useCallback(async () => {
+    // 逐次処理で、以下の処理を実行する
+    // 1. 抽選結果を取得する
+    // 2. 抽選結果が''であれば、入室メンバーを取得する
+    // 3. 入室メンバーの数を含んだ確認ダイアログを表示する
+    // 4. OKなら抽選を実行する
+    // 5. NGなら何もしない
+    await getDrawResultRefetch();
+    if (!drawResult) {
+      await getEntriesRefetch();
+      if (memberList.length > 1) {
+        if (
+          window.confirm(
+            memberList.length +
+              ' people are currently entering. Do you want to raffle with these members?'
+          )
+        ) {
+          // 抽選
+          const result = getRandomElement(memberList);
+          // 書き込み
+          sendDrawResult(result);
+        }
+      } else {
+        alert('There are not enough members to draw.');
+      }
     }
-  }, [userId, sendEntries, memberList]);
+  }, [getDrawResultRefetch, drawResult, getEntriesRefetch, memberList, sendDrawResult]);
+
+  // 入室処理
+  useEffect(() => {
+    // userIdが割り付けられていることを確認し、処理を続行する
+    if (userId && initialLoaded) {
+      // 抽選前
+      if (!drawResult) {
+        // 入室メンバーに自分を追加する
+        const newMemberList = [...memberList, userId];
+        // 重複を解消する
+        const uniqueMemberList: string[] = Array.from(new Set<string>(newMemberList));
+        sendEntries(uniqueMemberList);
+      }
+    }
+  }, [userId, initialLoaded, sendEntries, memberList, drawResult]);
 
   return (
     <div className={`l-page ${styles.play}`}>
       <div className={styles.container}>
-        <p>load: {initialLoaded ? 'ok' : 'ng'}</p>
-        <p>winner: {drawResult}</p>
-        <p>myself: {userId}</p>
+        {!isClosed ? (
+          <>
+            <p>winner: {drawResult}</p>
+            <p>myself: {userId}</p>
 
-        <div className={styles.memberList}>
-          {memberList.map((value, index) => (
-            <div key={index} className={styles.member}>
-              <span className={styles.memberIcon} style={{ color: `#${value}` }}></span>
-              {value === userId && <span className={styles.current}>myself</span>}
+            <div className={styles.memberList}>
+              {memberList.map((value, index) => (
+                <div key={index} className={styles.member}>
+                  {value === drawResult && <span className={styles.winner}>winner</span>}
+                  <span className={styles.memberIcon} style={{ color: `#${value}` }}></span>
+                  {value === userId && <span className={styles.current}>myself</span>}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        ) : (
+          <p>
+            This draw is closed.
+            <br />
+            Please wait until the next draw.
+          </p>
+        )}
         <div className={styles.menu}>
-          <Button handleClick={getEntriesRefetch} disabled={entriesLoading}>
-            reload
-          </Button>
-          <Button handleClick={handleDraw} disabled={drawResultLoading}>
-            drew
-          </Button>
+          {!isClosed && (
+            <>
+              <Button handleClick={getEntriesRefetch} disabled={entriesLoading || !!drawResult}>
+                reload
+              </Button>
+              <Button handleClick={handleDraw} disabled={drawResultLoading || !!drawResult}>
+                drew
+              </Button>
+            </>
+          )}
           <Button
             handleClick={() => {
               navigate('/');
