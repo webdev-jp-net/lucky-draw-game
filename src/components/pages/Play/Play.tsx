@@ -6,7 +6,12 @@ import { useSelector } from 'react-redux';
 
 import { Button } from 'components/parts/Button';
 import { RootState } from 'store';
-import { useGetEntriesQuery, useGetDrawResultQuery } from 'store/user';
+import {
+  useGetEntriesQuery,
+  useGetDrawResultQuery,
+  useUpdateEntriesMutation,
+  useUpdateDrawResultMutation,
+} from 'store/user';
 
 import styles from './Play.module.scss';
 
@@ -22,7 +27,11 @@ export const Play: FC = () => {
   } = useGetEntriesQuery();
 
   // 抽選結果取得
-  const { isSuccess: getDrawResultSuccess, isError: getDrawResultError } = useGetDrawResultQuery();
+  const {
+    isSuccess: getDrawResultSuccess,
+    isError: getDrawResultError,
+    refetch: getDrawResultRefetch,
+  } = useGetDrawResultQuery();
 
   // 成功: 入室メンバー取得
   useEffect(() => {
@@ -55,11 +64,39 @@ export const Play: FC = () => {
     return list[index];
   };
 
+  // 入室メンバーを更新する
+  const [
+    sendEntries, // mutation trigger
+    { isLoading: entriesLoading, isSuccess: entriesSuccess, isError: entriesError }, // mutation state
+  ] = useUpdateEntriesMutation();
+
+  // 抽選結果を更新する
+  const [
+    sendDrawResult, // mutation trigger
+    { isLoading: drawResultLoading, isSuccess: drawResultSuccess, isError: drawResultError }, // mutation state
+  ] = useUpdateDrawResultMutation();
+
+  // 抽選結果を更新成功したらrefetchする
+  useEffect(() => {
+    if (drawResultSuccess) getDrawResultRefetch();
+  }, [drawResultSuccess, getDrawResultRefetch]);
+
   // 抽選を実行する
   const handleDraw = () => {
     const result = getRandomElement(memberList);
     console.log({ result });
+    sendDrawResult(result);
   };
+
+  // userIdがあるならば、入室メンバーを更新する
+  useEffect(() => {
+    if (userId) {
+      const newMemberList = [...memberList, userId];
+      // 重複を解消する
+      const uniqueMemberList: string[] = Array.from(new Set<string>(newMemberList));
+      sendEntries(uniqueMemberList);
+    }
+  }, [userId, sendEntries, memberList]);
 
   return (
     <div className={`l-page ${styles.play}`}>
@@ -77,8 +114,12 @@ export const Play: FC = () => {
           ))}
         </div>
         <div className={styles.menu}>
-          <Button handleClick={getEntriesRefetch}>reload</Button>
-          <Button handleClick={handleDraw}>drew</Button>
+          <Button handleClick={getEntriesRefetch} disabled={entriesLoading}>
+            reload
+          </Button>
+          <Button handleClick={handleDraw} disabled={drawResultLoading}>
+            drew
+          </Button>
           <Button
             handleClick={() => {
               navigate('/');

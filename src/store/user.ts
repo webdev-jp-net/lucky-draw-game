@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
 import { db } from 'firebaseDB';
 
 type State = {
@@ -24,6 +24,7 @@ type DrawResultResponse = {
 
 // RTK Queryの設定
 // https://redux-toolkit.js.org/rtk-query/overview
+// 読み込み用のAPI
 type FirebaseBaseQueryParams = {
   path: string;
 };
@@ -36,9 +37,8 @@ const firebaseBaseQuery = async ({ path }: FirebaseBaseQueryParams) => {
     return { error: 'No such document!' };
   }
 };
-
-export const statusApi = createApi({
-  reducerPath: 'statusApi',
+export const statusGetApi = createApi({
+  reducerPath: 'statusGetApi',
   baseQuery: firebaseBaseQuery,
   endpoints: builder => ({
     getEntries: builder.query<EntriesResponse, void>({
@@ -49,8 +49,32 @@ export const statusApi = createApi({
     }),
   }),
 });
+export const { useGetEntriesQuery, useGetDrawResultQuery } = statusGetApi;
 
-export const { useGetEntriesQuery, useGetDrawResultQuery } = statusApi;
+// 書き込み用のAPI
+type FirebaseMutationParams<T> = {
+  path: string;
+  value: EntriesResponse | DrawResultResponse;
+};
+const firebaseMutationBaseQuery = async <T>({ path, value }: FirebaseMutationParams<T>) => {
+  const statusRef = collection(db, 'status');
+  await setDoc(doc(statusRef, path), value);
+  return { data: null }; // ここでは成功時にnullを返しています
+};
+export const statusUpdateApi = createApi({
+  reducerPath: 'statusUpdateApi',
+  baseQuery: firebaseMutationBaseQuery,
+  endpoints: builder => ({
+    updateEntries: builder.mutation<void, string[]>({
+      query: newMemberList => ({ path: 'room_entries', value: { memberList: newMemberList } }),
+    }),
+    updateDrawResult: builder.mutation<void, string>({
+      query: newUserId => ({ path: 'draw_result', value: { userId: newUserId } }),
+    }),
+  }),
+});
+
+export const { useUpdateEntriesMutation, useUpdateDrawResultMutation } = statusUpdateApi;
 
 const user = createSlice({
   name: 'user',
@@ -65,13 +89,13 @@ const user = createSlice({
 
   extraReducers: builder => {
     builder.addMatcher(
-      statusApi.endpoints.getEntries.matchFulfilled,
+      statusGetApi.endpoints.getEntries.matchFulfilled,
       (state, action: PayloadAction<EntriesResponse>) => {
         state.memberList = action.payload.memberList;
       }
     );
     builder.addMatcher(
-      statusApi.endpoints.getDrawResult.matchFulfilled,
+      statusGetApi.endpoints.getDrawResult.matchFulfilled,
       (state, action: PayloadAction<DrawResultResponse>) => {
         state.drawResult = action.payload.userId;
       }

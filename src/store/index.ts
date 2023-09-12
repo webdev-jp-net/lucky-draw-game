@@ -1,13 +1,17 @@
 import { combineReducers, configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
 
-import user, { statusApi } from './user';
+import user, { statusGetApi, statusUpdateApi } from './user';
 
 const reducer = combineReducers({
   user,
-  [statusApi.reducerPath]: statusApi.reducer,
+  [statusGetApi.reducerPath]: statusGetApi.reducer,
+  [statusUpdateApi.reducerPath]: statusUpdateApi.reducer,
 });
 
-const middleware = getDefaultMiddleware({ serializableCheck: false }).concat(statusApi.middleware);
+const middleware = getDefaultMiddleware({ serializableCheck: false }).concat(
+  statusGetApi.middleware,
+  statusUpdateApi.middleware
+);
 
 export const store = configureStore({ reducer, middleware });
 
