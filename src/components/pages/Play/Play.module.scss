@@ -15,7 +15,8 @@
 .memberList {
   display: flex;
   gap: rem(24);
-  margin: rem(24) 0;
+  margin: rem(48) 0;
+  justify-content: center;
 }
 
 .member {
@@ -23,10 +24,11 @@
   flex-direction: column;
   text-align: center;
   align-items: center;
+  position: relative;
 }
 
 .memberIcon {
-  @include rect(rem(18));
+  @include rect(rem(36));
 
   display: block;
   border-radius: 50%;
@@ -34,7 +36,17 @@
 }
 
 .current {
-  font-size: rem(10);
+  position: absolute;
+  font-size: rem(12);
+  top: 100%;
+  margin: rem(6) 0;
+}
+
+.winner {
+  margin: rem(6) 0;
+  bottom: 100%;
+  position: absolute;
+  font-size: rem(12);
 }
 
 .visualizer {
